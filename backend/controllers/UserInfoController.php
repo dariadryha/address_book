@@ -1,0 +1,100 @@
+<?php
+
+namespace backend\controllers;
+
+use Yii;
+use common\models\UserInfo;
+use common\models\UserInfoSearch;
+use backend\controllers\UserInfoBaseController;
+use yii\web\NotFoundHttpException;
+use yii\filters\VerbFilter;
+use yii\web\UploadedFile;
+
+/**
+ * UserInfoController implements the CRUD actions for UserInfo model.
+ */
+class UserInfoController extends UserInfoBaseController
+{
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            'verbs' => [
+                'class' => VerbFilter::className(),
+                'actions' => [
+                    'delete' => ['POST'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Creates a new UserInfo model.
+     * If creation is successful, the browser will be redirected to the 'view' page.
+     * @return mixed
+     */
+    public function actionCreate()
+    {   
+        $model = new UserInfo();
+        $model->scenario = 'create';
+
+        if ($model->load(Yii::$app->request->post())) {
+            if (UserInfo::find()->where(['user_id' => $model->user_id])->one()) {
+                return $this->setError('Sorry, contact information already exists. You can update it.');
+            }
+            $this->uploadImage($model);
+            $model->save();
+            return $this->redirect(['view', 'id' => $model->id]);
+        }
+
+        return $this->render('create', [
+            'model' => $model,
+        ]);
+    }
+
+    /**
+     * Updates an existing UserInfo model.
+     * If update is successful, the browser will be redirected to the 'view' page.
+     * @param integer $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionUpdate($id)
+    {
+        $model = $this->findModel($id);
+
+        $user_photo = $model->user_photo;
+        if ($model->load(Yii::$app->request->post())) {
+            $this->uploadImage($model);
+            if (!$model->user_photo)
+                $model->user_photo = $user_photo;
+            else
+                $this->deleteUserPhoto($user_photo);
+            $model->save();
+            return $this->redirect(['view', 'id' => $model->id]);
+        }
+
+        return $this->render('update', [
+            'model' => $model,
+        ]);
+    }
+
+    /**
+     * Deletes an existing UserInfo model.
+     * If deletion is successful, the browser will be redirected to the 'index' page.
+     * @param integer $id
+     * @return mixed
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+
+    public function actionDelete($id)
+    {
+        $model = $this->findModel($id);
+        $this->deleteUserPhoto($model->user_photo);
+        $model->delete();
+
+        return $this->redirect(['index']);
+    }
+}
